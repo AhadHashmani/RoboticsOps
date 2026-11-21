@@ -1,1 +1,1 @@
-"""Backend module for RoboticsOps."""\n
+"""Backend module for RoboticsOps."""

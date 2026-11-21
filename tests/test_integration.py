@@ -1,1 +1,60 @@
-\"\"\"\nIntegration tests for the complete system.\n\"\"\"\n\nimport pytest\nfrom backend.api import create_app\n\n\n@pytest.fixture\ndef client():\n    \"\"\"Create FastAPI test client.\"\"\"\n    app = create_app()\n    from fastapi.testclient import TestClient\n    return TestClient(app)\n\n\ndef test_api_root(client):\n    \"\"\"Test API root endpoint.\"\"\"\n    response = client.get(\"/\")\n    assert response.status_code == 200\n\n\ndef test_get_robots(client):\n    \"\"\"Test getting robots.\"\"\"\n    response = client.get(\"/robots\")\n    assert response.status_code == 200\n    data = response.json()\n    assert isinstance(data, list)\n    assert len(data) > 0\n\n\ndef test_get_single_robot(client):\n    \"\"\"Test getting single robot.\"\"\"\n    response = client.get(\"/robots/AGV-001\")\n    assert response.status_code == 200\n    data = response.json()\n    assert data[\"id\"] == \"AGV-001\"\n\n\ndef test_robot_not_found(client):\n    \"\"\"Test robot not found.\"\"\"\n    response = client.get(\"/robots/NONEXISTENT\")\n    assert response.status_code == 404\n\n\ndef test_warehouse_metrics(client):\n    \"\"\"Test warehouse metrics.\"\"\"\n    response = client.get(\"/warehouse/metrics\")\n    assert response.status_code == 200\n    data = response.json()\n    assert \"total_robots\" in data\n    assert \"efficiency\" in data\n\n\ndef test_health_check(client):\n    \"\"\"Test health check.\"\"\"\n    response = client.get(\"/health\")\n    assert response.status_code == 200\n    data = response.json()\n    assert data[\"status\"] == \"healthy\"\n
+"""
+Integration tests for the complete system.
+"""
+
+import pytest
+from backend.api import create_app
+
+
+@pytest.fixture
+def client():
+    """Create FastAPI test client."""
+    app = create_app()
+    from fastapi.testclient import TestClient
+    return TestClient(app)
+
+
+def test_api_root(client):
+    """Test API root endpoint."""
+    response = client.get("/")
+    assert response.status_code == 200
+
+
+def test_get_robots(client):
+    """Test getting robots."""
+    response = client.get("/robots")
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    assert len(data) > 0
+
+
+def test_get_single_robot(client):
+    """Test getting single robot."""
+    response = client.get("/robots/AGV-001")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["id"] == "AGV-001"
+
+
+def test_robot_not_found(client):
+    """Test robot not found."""
+    response = client.get("/robots/NONEXISTENT")
+    assert response.status_code == 404
+
+
+def test_warehouse_metrics(client):
+    """Test warehouse metrics."""
+    response = client.get("/warehouse/metrics")
+    assert response.status_code == 200
+    data = response.json()
+    assert "total_robots" in data
+    assert "efficiency" in data
+
+
+def test_health_check(client):
+    """Test health check."""
+    response = client.get("/health")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "healthy"

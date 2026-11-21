@@ -1,1 +1,1 @@
-"""Graphics module for RoboticsOps - WIPE OpenGL integration."""\n
+"""Placeholder package. No renderer is implemented here."""

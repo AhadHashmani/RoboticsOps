@@ -1,1 +1,1 @@
-"""Frontend module for RoboticsOps."""\n
+"""Frontend module for RoboticsOps."""

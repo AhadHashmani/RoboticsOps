@@ -1,1 +1,1 @@
-"""Test module for RoboticsOps."""\n
+"""Test module for RoboticsOps."""
