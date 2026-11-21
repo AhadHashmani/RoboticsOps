@@ -1,1 +1,1 @@
-"""Agent module for RoboticsOps."""\n
+"""Agent module for RoboticsOps."""

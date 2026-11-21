@@ -1,1 +1,32 @@
-\"\"\"\nRobot configuration tests.\n\"\"\"\n\nimport pytest\nfrom backend.api import Robot\n\n\ndef test_robot_creation():\n    \"\"\"Test robot model creation.\"\"\"\n    robot = Robot(\n        id=\"AGV-001\",\n        status=\"active\",\n        battery=85.0,\n        position=(45.2, 23.5),\n        current_task=\"Pick SKU-001\"\n    )\n    assert robot.id == \"AGV-001\"\n    assert robot.status == \"active\"\n    assert robot.battery == 85.0\n\n\ndef test_robot_validation():\n    \"\"\"Test robot validation.\"\"\"\n    with pytest.raises(Exception):\n        # This will fail due to invalid battery value\n        Robot(\n            id=\"AGV-001\",\n            status=\"invalid_status\",\n            battery=\"not_a_number\",\n            position=(45.2, 23.5)\n        )\n
+"""
+Robot configuration tests.
+"""
+
+import pytest
+from backend.api import Robot
+
+
+def test_robot_creation():
+    """Test robot model creation."""
+    robot = Robot(
+        id="AGV-001",
+        status="active",
+        battery=85.0,
+        position=(45.2, 23.5),
+        current_task="Pick SKU-001"
+    )
+    assert robot.id == "AGV-001"
+    assert robot.status == "active"
+    assert robot.battery == 85.0
+
+
+def test_robot_validation():
+    """Test robot validation."""
+    with pytest.raises(Exception):
+        # This will fail due to invalid battery value
+        Robot(
+            id="AGV-001",
+            status="invalid_status",
+            battery="not_a_number",
+            position=(45.2, 23.5)
+        )

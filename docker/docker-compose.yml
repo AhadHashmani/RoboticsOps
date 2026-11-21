@@ -1,1 +1,53 @@
-version: '3.8'\n\nservices:\n  api:\n    build:\n      context: ..\n      dockerfile: docker/Dockerfile\n    ports:\n      - \"8000:8000\"\n    environment:\n      - RUN_MODE=api\n      - DB_HOST=postgres\n    depends_on:\n      - postgres\n    volumes:\n      - ..:/app\n\n  dashboard:\n    build:\n      context: ..\n      dockerfile: docker/Dockerfile\n    ports:\n      - \"8501:8501\"\n    environment:\n      - RUN_MODE=dashboard\n    volumes:\n      - ..:/app\n\n  agent:\n    build:\n      context: ..\n      dockerfile: docker/Dockerfile\n    environment:\n      - RUN_MODE=agent\n      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}\n    volumes:\n      - ..:/app\n\n  postgres:\n    image: postgres:15\n    environment:\n      POSTGRES_DB: roboticsops\n      POSTGRES_USER: roboticsops\n      POSTGRES_PASSWORD: secure_password\n    ports:\n      - \"5432:5432\"\n    volumes:\n      - postgres_data:/var/lib/postgresql/data\n\nvolumes:\n  postgres_data:\n
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - RUN_MODE=api
+      # DB_HOST is not read by the Python app. Robot state is an in-memory dict.
+      - DB_HOST=postgres
+    depends_on:
+      - postgres
+    volumes:
+      - ..:/app
+
+  dashboard:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "8501:8501"
+    environment:
+      - RUN_MODE=dashboard
+    volumes:
+      - ..:/app
+
+  agent:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    environment:
+      - RUN_MODE=agent
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    volumes:
+      - ..:/app
+
+  # This service starts, but no application code connects to it.
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: roboticsops
+      POSTGRES_USER: roboticsops
+      POSTGRES_PASSWORD: secure_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

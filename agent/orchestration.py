@@ -1,1 +1,223 @@
-"""\nMulti-turn Claude agent for robot orchestration.\nEnhanced version of CarphaCom with AI-driven task allocation.\n"""\n\nfrom anthropic import Anthropic\nfrom typing import Dict, List, Any\nimport json\nimport logging\n\nlogging.basicConfig(level=logging.INFO)\nlogger = logging.getLogger(__name__)\n\n\nclass RoboticsAgent:\n    """AI agent that controls warehouse robots."""\n    \n    def __init__(self):\n        self.client = Anthropic()\n        self.model = "claude-3-5-sonnet-20241022"\n        self.conversation_history = []\n        self.robots = {}  # Robot state\n        self.warehouse = {}  # Warehouse state\n        self.tools = self._define_tools()\n    \n    def _define_tools(self) -> List[Dict[str, Any]]:\n        """Define tools for robot control."""\n        return [\n            {\n                "name": "query_robot_status",\n                "description": "Check status of a robot (position, battery, task)",\n                "input_schema": {\n                    "type": "object",\n                    "properties": {\n                        "robot_id": {\n                            "type": "string",\n                            "description": "Robot identifier (e.g., 'AGV-001')"\n                        }\n                    },\n                    "required": ["robot_id"]\n                }\n            },\n            {\n                "name": "assign_task_to_robot",\n                "description": "Assign a warehouse task to a specific robot",\n                "input_schema": {\n                    "type": "object",\n                    "properties": {\n                        "robot_id": {"type": "string"},\n                        "task": {"type": "string"},\n                        "priority": {\n                            "type": "string",\n                            "enum": ["low", "medium", "high"]\n                        }\n                    },\n                    "required": ["robot_id", "task"]\n                }\n            },\n            {\n                "name": "get_warehouse_layout",\n                "description": "Get current warehouse layout and robot positions",\n                "input_schema": {\n                    "type": "object",\n                    "properties": {}\n                }\n            },\n            {\n                "name": "predict_completion_time",\n                "description": "Predict task completion time based on robot/task",\n                "input_schema": {\n                    "type": "object",\n                    "properties": {\n                        "robot_id": {"type": "string"},\n                        "task": {"type": "string"}\n                    },\n                    "required": ["robot_id", "task"]\n                }\n            }\n        ]\n    \n    def start(self):\n        """Start interactive agent session."""\n        logger.info("🤖 Robotics Agent Started")\n        logger.info("Commands: status, assign, layout, optimize, exit")\n        \n        initial_prompt = """You are an AI-powered warehouse robotics orchestration agent.\n        \nYour responsibilities:\n1. Monitor robot status and health\n2. Assign tasks optimally to available robots\n3. Predict completion times\n4. Optimize warehouse operations\n5. Handle conflicts and emergencies\n\nAvailable robots: AGV-001, AGV-002, AGV-003, AGV-004\nWarehouse layout: 100m x 50m with 12 stations\n\nUser requests come in. Respond helpfully and use tools when needed."""\n        \n        self.conversation_history.append({\n            "role": "user",\n            "content": initial_prompt\n        })\n        \n        # Get initial response\n        self._get_agent_response()\n        \n        # Interactive loop\n        while True:\n            user_input = input("\n📦 Warehouse Command: ").strip()\n            \n            if user_input.lower() == "exit":\n                logger.info("Shutting down agent...")\n                break\n            \n            if not user_input:\n                continue\n            \n            self.conversation_history.append({\n                "role": "user",\n                "content": user_input\n            })\n            \n            self._get_agent_response()\n    \n    def _get_agent_response(self):\n        """Get response from Claude agent."""\n        response = self.client.messages.create(\n            model=self.model,\n            max_tokens=1024,\n            tools=self.tools,\n            messages=self.conversation_history\n        )\n        \n        # Process response\n        assistant_content = []\n        for block in response.content:\n            if block.type == "text":\n                print(f"\n🤖 Agent: {block.text}")\n                assistant_content.append(block)\n            \n            elif block.type == "tool_use":\n                logger.info(f"Using tool: {block.name}")\n                result = self._execute_tool(block.name, block.input)\n                assistant_content.append(block)\n                \n                self.conversation_history.append({\n                    "role": "assistant",\n                    "content": assistant_content\n                })\n                \n                self.conversation_history.append({\n                    "role": "user",\n                    "content": [\n                        {\n                            "type": "tool_result",\n                            "tool_use_id": block.id,\n                            "content": json.dumps(result)\n                        }\n                    ]\n                })\n                return\n        \n        # Add response to history if no tool use\n        if response.stop_reason == "end_turn":\n            self.conversation_history.append({\n                "role": "assistant",\n                "content": assistant_content\n            })\n    \n    def _execute_tool(self, tool_name: str, tool_input: Dict) -> Dict[str, Any]:\n        """Execute a tool."""\n        if tool_name == "query_robot_status":\n            robot_id = tool_input["robot_id"]\n            return {\n                "robot_id": robot_id,\n                "status": "active",\n                "position": [45.2, 23.5],\n                "battery": 85,\n                "current_task": "Pick item SKU-001",\n                "task_progress": 60\n            }\n        \n        elif tool_name == "assign_task_to_robot":\n            return {\n                "success": True,\n                "message": f"Task assigned to {tool_input['robot_id']}",\n                "estimated_completion": "2 minutes"\n            }\n        \n        elif tool_name == "get_warehouse_layout":\n            return {\n                "dimensions": "100m x 50m",\n                "robots": [\n                    {"id": "AGV-001", "position": [45.2, 23.5]},\n                    {"id": "AGV-002", "position": [20.0, 15.0]},\n                    {"id": "AGV-003", "position": [75.5, 40.0]},\n                    {"id": "AGV-004", "position": [30.0, 35.0]}\n                ],\n                "stations": 12\n            }\n        \n        elif tool_name == "predict_completion_time":\n            return {\n                "robot_id": tool_input["robot_id"],\n                "task": tool_input["task"],\n                "estimated_minutes": 3\n            }\n        \n        return {"error": f"Unknown tool: {tool_name}"}\n\n\nif __name__ == "__main__":\n    agent = RoboticsAgent()\n    agent.start()\n
+"""
+Claude tool-calling loop for a simulated warehouse fleet.
+
+The handlers in _execute_tool return fixed dictionaries. They do not read
+or update the FastAPI robot dict in backend/api.py.
+"""
+
+from anthropic import Anthropic
+from typing import Dict, List, Any
+import json
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+class RoboticsAgent:
+    """Sends warehouse requests to Claude and runs local tool handlers."""
+    
+    def __init__(self):
+        # Created on the first messages call so local tool tests do not need a key.
+        self._client = None
+        self.model = "claude-3-5-sonnet-20241022"
+        self.conversation_history = []
+        self.robots = {}  # Robot state
+        self.warehouse = {}  # Warehouse state
+        self.tools = self._define_tools()
+
+    def _anthropic(self) -> Anthropic:
+        if self._client is None:
+            self._client = Anthropic()
+        return self._client
+    
+    def _define_tools(self) -> List[Dict[str, Any]]:
+        """Define tools for robot control."""
+        return [
+            {
+                "name": "query_robot_status",
+                "description": "Check status of a robot (position, battery, task)",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "robot_id": {
+                            "type": "string",
+                            "description": "Robot identifier (e.g., 'AGV-001')"
+                        }
+                    },
+                    "required": ["robot_id"]
+                }
+            },
+            {
+                "name": "assign_task_to_robot",
+                "description": "Assign a warehouse task to a specific robot",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "robot_id": {"type": "string"},
+                        "task": {"type": "string"},
+                        "priority": {
+                            "type": "string",
+                            "enum": ["low", "medium", "high"]
+                        }
+                    },
+                    "required": ["robot_id", "task"]
+                }
+            },
+            {
+                "name": "get_warehouse_layout",
+                "description": "Get current warehouse layout and robot positions",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {}
+                }
+            },
+            {
+                "name": "predict_completion_time",
+                "description": "Predict task completion time based on robot/task",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "robot_id": {"type": "string"},
+                        "task": {"type": "string"}
+                    },
+                    "required": ["robot_id", "task"]
+                }
+            }
+        ]
+    
+    def start(self):
+        """Start interactive agent session."""
+        logger.info("Robotics agent started")
+        logger.info("Type a request, or exit. The first turn calls Claude and needs ANTHROPIC_API_KEY.")
+        
+        initial_prompt = """You are an AI-powered warehouse robotics orchestration agent.
+        
+Your responsibilities:
+1. Monitor robot status and health
+2. Assign tasks optimally to available robots
+3. Predict completion times
+4. Optimize warehouse operations
+5. Handle conflicts and emergencies
+
+Available robots: AGV-001, AGV-002, AGV-003, AGV-004
+Warehouse layout: 100m x 50m with 12 stations
+
+User requests come in. Respond helpfully and use tools when needed."""
+        
+        self.conversation_history.append({
+            "role": "user",
+            "content": initial_prompt
+        })
+        
+        # Get initial response
+        self._get_agent_response()
+        
+        # Interactive loop
+        while True:
+            user_input = input("\n📦 Warehouse Command: ").strip()
+            
+            if user_input.lower() == "exit":
+                logger.info("Shutting down agent...")
+                break
+            
+            if not user_input:
+                continue
+            
+            self.conversation_history.append({
+                "role": "user",
+                "content": user_input
+            })
+            
+            self._get_agent_response()
+    
+    def _get_agent_response(self):
+        """Get response from Claude agent."""
+        response = self._anthropic().messages.create(
+            model=self.model,
+            max_tokens=1024,
+            tools=self.tools,
+            messages=self.conversation_history
+        )
+        
+        # Process response
+        assistant_content = []
+        for block in response.content:
+            if block.type == "text":
+                print(f"\n🤖 Agent: {block.text}")
+                assistant_content.append(block)
+            
+            elif block.type == "tool_use":
+                logger.info(f"Using tool: {block.name}")
+                result = self._execute_tool(block.name, block.input)
+                assistant_content.append(block)
+                
+                self.conversation_history.append({
+                    "role": "assistant",
+                    "content": assistant_content
+                })
+                
+                self.conversation_history.append({
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "tool_result",
+                            "tool_use_id": block.id,
+                            "content": json.dumps(result)
+                        }
+                    ]
+                })
+                return
+        
+        # Add response to history if no tool use
+        if response.stop_reason == "end_turn":
+            self.conversation_history.append({
+                "role": "assistant",
+                "content": assistant_content
+            })
+    
+    def _execute_tool(self, tool_name: str, tool_input: Dict) -> Dict[str, Any]:
+        """Execute a tool."""
+        if tool_name == "query_robot_status":
+            robot_id = tool_input["robot_id"]
+            return {
+                "robot_id": robot_id,
+                "status": "active",
+                "position": [45.2, 23.5],
+                "battery": 85,
+                "current_task": "Pick item SKU-001",
+                "task_progress": 60
+            }
+        
+        elif tool_name == "assign_task_to_robot":
+            return {
+                "success": True,
+                "message": f"Task assigned to {tool_input['robot_id']}",
+                "estimated_completion": "2 minutes"
+            }
+        
+        elif tool_name == "get_warehouse_layout":
+            return {
+                "dimensions": "100m x 50m",
+                "robots": [
+                    {"id": "AGV-001", "position": [45.2, 23.5]},
+                    {"id": "AGV-002", "position": [20.0, 15.0]},
+                    {"id": "AGV-003", "position": [75.5, 40.0]},
+                    {"id": "AGV-004", "position": [30.0, 35.0]}
+                ],
+                "stations": 12
+            }
+        
+        elif tool_name == "predict_completion_time":
+            return {
+                "robot_id": tool_input["robot_id"],
+                "task": tool_input["task"],
+                "estimated_minutes": 3
+            }
+        
+        return {"error": f"Unknown tool: {tool_name}"}
+
+
+if __name__ == "__main__":
+    agent = RoboticsAgent()
+    agent.start()

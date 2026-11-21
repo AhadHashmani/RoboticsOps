@@ -1,1 +1,66 @@
-"""\nConfiguration management for RoboticsOps.\nLoads robot configs, warehouse layout, and settings.\n"""\n\nimport yaml\nimport json\nfrom pathlib import Path\nfrom typing import Dict, Any\n\n\nclass ConfigManager:\n    """Manage application configuration."""\n    \n    def __init__(self):\n        self.config_dir = Path(__file__).parent\n        self.robot_configs = self._load_robot_configs()\n        self.warehouse_layout = self._load_warehouse_layout()\n    \n    def _load_robot_configs(self) -> Dict[str, Any]:\n        """Load robot configurations."""\n        try:\n            config_file = self.config_dir / \"robot_configs.yaml\"\n            if config_file.exists():\n                with open(config_file, 'r') as f:\n                    return yaml.safe_load(f) or {}\n        except Exception as e:\n            print(f\"Error loading robot configs: {e}\")\n        \n        # Default configs\n        return {\n            \"AGV-001\": {\"type\": \"picker\", \"max_speed\": 1.5, \"capacity\": 50},\n            \"AGV-002\": {\"type\": \"picker\", \"max_speed\": 1.5, \"capacity\": 50},\n            \"AGV-003\": {\"type\": \"transporter\", \"max_speed\": 2.0, \"capacity\": 100},\n            \"AGV-004\": {\"type\": \"transporter\", \"max_speed\": 2.0, \"capacity\": 100},\n        }\n    \n    def _load_warehouse_layout(self) -> Dict[str, Any]:\n        """Load warehouse layout."""\n        try:\n            layout_file = self.config_dir / \"warehouse_layout.json\"\n            if layout_file.exists():\n                with open(layout_file, 'r') as f:\n                    return json.load(f)\n        except Exception as e:\n            print(f\"Error loading warehouse layout: {e}\")\n        \n        # Default layout\n        return {\n            \"width\": 100,\n            \"height\": 50,\n            \"stations\": [\n                {\"id\": f\"Station-{i}\", \"position\": (i*8, 25)} for i in range(1, 13)\n            ]\n        }\n\n\n# Global config instance\n_config_manager = None\n\ndef get_config() -> ConfigManager:\n    \"\"\"Get global config manager.\"\"\"\n    global _config_manager\n    if _config_manager is None:\n        _config_manager = ConfigManager()\n    return _config_manager\n
+"""
+Configuration management for RoboticsOps.
+Loads robot configs, warehouse layout, and settings.
+"""
+
+import yaml
+import json
+from pathlib import Path
+from typing import Dict, Any
+
+
+class ConfigManager:
+    """Manage application configuration."""
+    
+    def __init__(self):
+        self.config_dir = Path(__file__).parent
+        self.robot_configs = self._load_robot_configs()
+        self.warehouse_layout = self._load_warehouse_layout()
+    
+    def _load_robot_configs(self) -> Dict[str, Any]:
+        """Load robot configurations."""
+        try:
+            config_file = self.config_dir / "robot_configs.yaml"
+            if config_file.exists():
+                with open(config_file, 'r') as f:
+                    return yaml.safe_load(f) or {}
+        except Exception as e:
+            print(f"Error loading robot configs: {e}")
+        
+        # Default configs
+        return {
+            "AGV-001": {"type": "picker", "max_speed": 1.5, "capacity": 50},
+            "AGV-002": {"type": "picker", "max_speed": 1.5, "capacity": 50},
+            "AGV-003": {"type": "transporter", "max_speed": 2.0, "capacity": 100},
+            "AGV-004": {"type": "transporter", "max_speed": 2.0, "capacity": 100},
+        }
+    
+    def _load_warehouse_layout(self) -> Dict[str, Any]:
+        """Load warehouse layout."""
+        try:
+            layout_file = self.config_dir / "warehouse_layout.json"
+            if layout_file.exists():
+                with open(layout_file, 'r') as f:
+                    return json.load(f)
+        except Exception as e:
+            print(f"Error loading warehouse layout: {e}")
+        
+        # Default layout
+        return {
+            "width": 100,
+            "height": 50,
+            "stations": [
+                {"id": f"Station-{i}", "position": (i*8, 25)} for i in range(1, 13)
+            ]
+        }
+
+
+# Global config instance
+_config_manager = None
+
+def get_config() -> ConfigManager:
+    """Get global config manager."""
+    global _config_manager
+    if _config_manager is None:
+        _config_manager = ConfigManager()
+    return _config_manager
